@@ -36,12 +36,12 @@ Simple file `route/queue.php`
 
 ```php
 // Define a standard "endpoint"
-Queue::listen('cart.created', new CartCreated());
+Queue::listen('cart.created', CartCreated::class);
 
 // Or group it as you prefer
 Queue::name('order.')->group(function () {
-    Queue::listen('shipped', new OrderShipped());
-    Queue::listen('confirmed', new OrderConfirmed());
+    Queue::listen('shipped', OrderShipped::class);
+    Queue::listen('confirmed', OrderConfirmed::class);
 });
 
 ```
@@ -50,10 +50,10 @@ Queue::name('order.')->group(function () {
 
 ```php
 // Pass dispatchable job
-Queue::listen('order.confirmed', new OrderConfirmedJob());
+Queue::listen('order.confirmed', OrderConfirmedJob::class);
 
 // Pass dispatchable event
-Queue::listen('order.confirmed', new OrderConfirmedEvent());
+Queue::listen('order.confirmed', OrderConfirmedEvent::class);
 
 // Pass class and method as in standard Laravel routing
 Queue::listen('order.confirmed', [OrderConfirmed::class, 'sendNotification']);
@@ -62,8 +62,8 @@ Queue::listen('order.confirmed', [OrderConfirmed::class, 'sendNotification']);
 Queue::listen('order.confirmed', InvokableOrderConfirmed::class);
 
 // You can also use closure for local testing
-Queue::listen('order.confirmed', function () {
-    //
+Queue::listen('order.confirmed', function (string|array $message) {
+    return $message; // ['order_id' => 1]
 });
 ```
 
