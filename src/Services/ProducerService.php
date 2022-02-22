@@ -9,7 +9,7 @@ class ProducerService
 {
     public function __construct(private Connection $connection) { }
 
-    public function send(string $message, string $endpoint): void
+    public function send(string|array $message, string $endpoint): void
     {
         $this->getChannel()->exchange_declare(
             $this->getExchangeName(),
@@ -19,7 +19,9 @@ class ProducerService
             false
         );
 
-        $queueMessage = new AMQPMessage($message);
+        $queueMessage = new AMQPMessage(
+            json_encode($message)
+        );
 
         $this->getChannel()->basic_publish($queueMessage, $this->getExchangeName(), $endpoint);
 

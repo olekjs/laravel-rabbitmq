@@ -94,8 +94,12 @@ class ConsumerService
     private function getCallback(array $queueRouting): Closure
     {
         return function ($message) use ($queueRouting) {
-            $action      = $queueRouting[$message->getRoutingKey()];
-            $messageBody = $message->getBody();
+            $action = $queueRouting[$message->getRoutingKey()];
+
+            $messageBody = json_decode(
+                json: $message->getBody(),
+                associative: true
+            );
 
             if (is_array($action)) {
                 list($class, $method) = $action;
@@ -104,32 +108,41 @@ class ConsumerService
             }
 
             if (is_string($action)) {
-                call_user_func(new $action);
+                $actionHasBeenDispatched = $this->dispatchAction($action, $messageBody);
+
+                if (!$actionHasBeenDispatched) {
+                    call_user_func(new $action($messageBody));
+                }
             }
 
             if ($action instanceof Closure) {
-                $action();
-            }
-
-            if ($this->actionIsDispachable($action)) {
-                dispatch($action);
+                $action($messageBody);
             }
         };
     }
 
-    private function actionIsDispachable(array|string|callable|object $action): bool
+    private function dispatchAction(string $action, string $messageBody): bool
     {
-        if (!is_object($action)) {
-            return false;
+        if ($this->hasTrait($action, DispatchableBus::class)) {
+            dispatch(new $action($messageBody));
+
+            return true;
         }
 
-        $target   = [DispatchableBus::class, DispatchableEvent::class];
-        $haystack = class_uses($action::class);
+        if ($this->hasTrait($action, DispatchableEvent::class)) {
+            event(new $action($messageBody));
 
-        if (count(array_intersect($haystack, $target)) > 0) {
             return true;
         }
 
         return false;
+    }
+
+    private function hasTrait(string $action, string $trait): bool
+    {
+        $target   = [$trait];
+        $haystack = class_uses($action);
+
+        return count(array_intersect($haystack, $target)) > 0;
     }
 }
